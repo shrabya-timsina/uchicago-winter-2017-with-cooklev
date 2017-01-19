@@ -106,7 +106,8 @@ def put_words_to_index(all_words, course_identifier, index_dictionary):
     words_to_index = all_words - INDEX_IGNORE
     for word in words_to_index:
         if word in index_dictionary:
-            index_dictionary[word].append(course_identifier)
+            if course_identifier not in index_dictionary[word]:
+                index_dictionary[word].append(course_identifier)
         else:
             index_dictionary[word] = [course_identifier]
     return index_dictionary
