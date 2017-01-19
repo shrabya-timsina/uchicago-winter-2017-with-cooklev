@@ -40,67 +40,54 @@ reduce the soup to blocks of texts of classes
 ### YOUR FUNCTIONS HERE
 
 
-#starting_url = "http://www.classes.cs.uchicago.edu/archive/2015/winter/12200-1/new.collegecatalog.uchicago.edu/index.html"
-#limiting_domain = "classes.cs.uchicago.edu"
-
 def crawler(starting_url, limiting_domain, course_map_filename):
-    #course_map_filename = 'course_map.json'
+
     course_code_identifier_map = open_json_key(course_map_filename)
 
     urls_to_crawl = queue.Queue()
-    real_urls_crawled = set() # just for reference to compare with correct results
-    all_urls_crawled = set()
+    urls_crawled = set()
+    urls_processed = set() 
     
     urls_to_crawl.put(starting_url)
+    urls_crawled.add(starting_url)
     crawl_count = 0
     index_dictionary = {}
 
-
-    #link = list_of_urls_in_page[0]
     
     while (not urls_to_crawl.empty()) and (crawl_count < 1000):
-        
         
         next_to_crawl = urls_to_crawl.get()
         request = util.get_request(next_to_crawl)
         
-
         if request is not None:
         
             real_url = util.get_request_url(request)
-            
             if real_url is not None:
-
-                if real_url not in real_urls_crawled:
-                    
-                    real_urls_crawled.add(real_url)
-                    soup = convert_to_soup(request)
                 
+                if real_url not in urls_crawled:
+                    urls_crawled.add(real_url)
                     
-                    if soup is not None:
+                if real_url not in urls_processed:
+                    urls_processed.add(real_url)
 
-                        ## indexer here
+                    soup = convert_to_soup(request)
+                    if soup is not None:
                         index_dictionary = build_dict(soup, index_dictionary, course_code_identifier_map)
                 
                         list_of_urls_in_page = soup.find_all('a', href=True)
-                    
                         for link in list_of_urls_in_page:
-                    
                             url = extract_url(link, real_url)
-
                             if url is not None:
-                                if (url not in all_urls_crawled):
+                                if (url not in urls_crawled):
                                     if util.is_url_ok_to_follow(url, limiting_domain):
                                         urls_to_crawl.put(url)
-                                        all_urls_crawled.add(next_to_crawl)
+                                        urls_crawled.add(url)
  
 
         crawl_count += 1 
 
 
-    return index_dictionary
-
-    
+    return index_dictionary 
 
 def init_q(starting_url, limiting_domain):
     '''
@@ -150,7 +137,6 @@ def build_dict(soup, index_dictionary, course_code_identifier_map):
         if course_block_title is not None:
             
             words_in_title = get_words_from_text(course_block_title.text)
-            
             if course_description is None:
                 words_in_description = []
             else:
@@ -163,8 +149,8 @@ def build_dict(soup, index_dictionary, course_code_identifier_map):
                 course_identifier = get_course_identifier(course_block_title.text, course_code_identifier_map)          
                 
                 all_words = set(words_in_title + words_in_description)
-                words_to_index = all_words - INDEX_IGNORE
-                index_dictionary[course_identifier] = words_to_index
+
+                index_dictionary = put_words_to_index(all_words, course_identifier, index_dictionary)
 
             else:
                 
@@ -183,9 +169,18 @@ def build_dict(soup, index_dictionary, course_code_identifier_map):
                         
                     all_words = set(words_in_title + words_in_description 
                                         + words_in_subseq_title + words_in_subseq_description)
-                    words_to_index = all_words - INDEX_IGNORE
-                    index_dictionary[subsequence_identifier] = words_to_index
 
+                    index_dictionary = put_words_to_index(all_words, subsequence_identifier, index_dictionary)
+
+    return index_dictionary
+
+def put_words_to_index(all_words, course_identifier, index_dictionary):
+    words_to_index = all_words - INDEX_IGNORE
+    for word in words_to_index:
+        if word in index_dictionary:
+            index_dictionary[word].append(course_identifier)
+        else:
+            index_dictionary[word] = [course_identifier]
     return index_dictionary
 
 def get_course_identifier(course_code_and_title, course_code_identifier_map):
@@ -203,10 +198,6 @@ def get_words_from_text(text_block):
     words = re.findall(words_pattern, text_block)
     return words
 
-#def get_words_from_title(course_code_and_title):
-   # words_in_title = get_words_from_text(course_code_and_title)
-    #words_in_title = words_in_title[1:] #removing first word which is part of course code
-   # return words_in_title
 
 def open_json_key(course_map_filename):
     with open(course_map_filename) as json_data:
@@ -214,12 +205,13 @@ def open_json_key(course_map_filename):
     return course_number_data
 
 
-def write_to_file(course_dict):
-    with open('catalog-index.csv', 'w') as csvfile:
+def write_to_file(course_dict, index_filename):
+    with open(index_filename, 'w') as csvfile:
         writer = csv.writer(csvfile, delimiter='|')
-        for identifier in course_dict:
-            for words in course_dict[identifier]:
-                writer.writerow([identifier, words])
+        for word in sorted(course_dict.keys()):
+            for identifier in sorted(course_dict[word]):
+                writer.writerow([identifier, word])
+
 
 def go(num_pages_to_crawl, course_map_filename, index_filename):
     '''
@@ -239,7 +231,10 @@ def go(num_pages_to_crawl, course_map_filename, index_filename):
     limiting_domain = "classes.cs.uchicago.edu"
 
     course_words_index = crawler(starting_url, limiting_domain, course_map_filename)
-    write_to_file(course_words_index)
+
+    write_to_file(course_words_index, index_filename)
+
+    
 
 
 
