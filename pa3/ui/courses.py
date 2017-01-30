@@ -1,6 +1,8 @@
 ### CS122, Winter 2017: Course search engine: search
 ###
-### Steven Cooklev
+
+### Steven Cooklev & Shrab-daddy Timsina
+
 
 from math import radians, cos, sin, asin, sqrt
 import sqlite3
@@ -115,7 +117,6 @@ example_1 = {"building":"RY",
              "enroll_lower":20,
              "terms":"computer science"}
 
-
 '''
 obtain connections and cursor for database
 loop through input keys and get output attributes
@@ -226,12 +227,7 @@ def generate_query(dic_input):
         final_query = selection + from_join_statement + on_statement + where_statement + ";"
 
 
-
-
     return final_query
-
-
-
 
 
 
@@ -244,4 +240,3 @@ def go():
     print("---")
     zz = generate_query(example_1)
     print(zz)
-
