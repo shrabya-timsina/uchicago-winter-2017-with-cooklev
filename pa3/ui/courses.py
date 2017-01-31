@@ -1,10 +1,7 @@
 ### CS122, Winter 2017: Course search engine: search
 ###
-<<<<<<< HEAD
-### Your name(s)
-=======
-### Steven Cooklev
->>>>>>> 28ad2a174042d45071c137463aafded8783b967e
+### Steven Cooklev & Shrab-daddy Timsina
+
 
 from math import radians, cos, sin, asin, sqrt
 import sqlite3
@@ -47,6 +44,24 @@ def find_courses(args_from_ui):
     c = generate_query(args_from_ui)
 
     access_object = cursor.execute(c, args)
+    connection = sqlite3.connect(DATABASE_FILENAME)
+    connection.create_function("time_between", 4, compute_time_between)
+    cursor = connection.cursor()
+
+    (query_string, arguments) = generate_query(args_from_ui)
+    print(query_string)
+    print()
+    print(arguments)
+    print()
+    resulting_table = cursor.execute(query_string, arguments)
+    print(resulting_table.fetchall())
+
+
+
+
+
+
+    
 
 
 
@@ -130,8 +145,12 @@ example_1 = {"building":"RY",
              "enroll_lower":20,
              "terms":"computer science"}
 
-<<<<<<< HEAD
-=======
+args_from_ui = {"dept":"CMSC",
+             "day":["MWF", "TR"],
+             "time_start":1030,
+             "time_end":1500,
+             "enroll_lower":20,
+             "terms":"computer science"}
 
 '''
 obtain connections and cursor for database
@@ -145,52 +164,119 @@ c.execute(query, args)
 '''
 
 def determine_output_attributes(dic_input):
-  '''
-  Given a dictionary that describes a desired query,
-  returns the set of attributes to be included in output
-  for find_courses functions
+    '''
+    Given a dictionary that describes a desired query,
+    returns the set of attributes to be included in output
+    for find_courses functions
 
-  Input: dic_input, a dictionary
+    Input: dic_input, a dictionary
 
-  Output: output_attributes: set of strings
-  '''
-  output_attributes = set(['courses.dept', 'courses.course_num'])
-  order_dict = {'courses.dept': 1, 'courses.course_num': 2, 'sections.section_id': 3, 'meeting_patterns.day': 4, 
-                'meeting_patterns.time_start': 5, 'meeting_patterns.time_end': 6, 'gps.building': 7, 'walking_time': 8, 
-                'sections.enrollment': 9, 'courses.title': 10}
-
-  for key in dic_input:
-
-    if key in ['terms', 'dept']:
-      output_attributes.add('courses.title')
-
-    if key in ['time_start', 'time_end']:
-      output_attributes.update(['sections.section_id', 'meeting_patterns.day', 'meeting_patterns.time_start', 'meeting_patterns.time_end'])   
-
-    if key in ['walking_time', 'gps.building']:
-      output_attributes.update(['sections.section_id', 'meeting_patterns.day', 'meeting_patterns.time_start', 
-                            'meeting_patterns.time_end', 'gps.building', 'walking_time'])
-
-    if key in ['enroll_lower', 'enroll_upper']:
-      output_attributes.update(['sections.section_id', 'meeting_patterns.day', 'meeting_patterns.time_start', 'meeting_patterns.time_end', 'sections.enrollment'])
-
-  attribute_list = sorted(list(output_attributes), key=lambda x:order_dict[x])
-
-  return attribute_list  
-
-def determine_where_filters(dic_input):
-    map_input_to_operation = {'terms': 'catalog_index.word = ?', 'dept': 'courses.dept = ?',
-                            'day' : 'meeting_patterns.day = ?', 'time_start': 'meeting_patterns.day >= ?',
-                            'time_end': 'meeting_patterns.day <= ?', 'walking_time': 'gps---',
-                            'building': 'gps.building_code----', 'enroll_lower': 'meeting_patterns.time_end >= ?',
-                             'enroll_upper': 'meeting_patterns.time_end <= ?'}
+    Output: output_attributes: set of strings
+    '''
     
-    input_filters = []
-    
+    ouput_order = {'courses.dept': 1, 'courses.course_num': 2, 'sections.section_id': 3, 
+                   'meeting_patterns.day': 4,'meeting_patterns.time_start': 5, 
+                   'meeting_patterns.time_end': 6, 'gps.building': 7, 
+                   'walking_time': 8,'sections.enrollment': 9, 'courses.title': 10}
+
+    map_input_to_output_attributes = {'terms': ['courses.title'], 
+                            'dept':['courses.title'],
+                            'day' : ['sections.section_id', 'meeting_patterns.day', 
+                                          'meeting_patterns.time_start', 
+                                          'meeting_patterns.time_end'], 
+                            'time_start': ['sections.section_id', 'meeting_patterns.day', 
+                                          'meeting_patterns.time_start', 
+                                          'meeting_patterns.time_end'],
+                            'time_end': ['sections.section_id', 'meeting_patterns.day', 
+                                          'meeting_patterns.time_start', 
+                                          'meeting_patterns.time_end'],
+                            'building': ['sections.section_id', 'meeting_patterns.day', 
+                                         'meeting_patterns.time_start', 
+                                          'meeting_patterns.time_end', 'gps.building', 
+                                          'walking_time'],
+                            'walking_time': ['sections.section_id', 'meeting_patterns.day', 
+                                         'meeting_patterns.time_start', 
+                                          'meeting_patterns.time_end', 'gps.building', 
+                                          'walking_time'],
+                            'enroll_lower': ['sections.section_id', 'meeting_patterns.day', 
+                                            'meeting_patterns.time_start', 'meeting_patterns.time_end', 
+                                            'sections.enrollment'],
+                            'enroll_upper': ['sections.section_id', 'meeting_patterns.day', 
+                                            'meeting_patterns.time_start', 'meeting_patterns.time_end', 
+                                            'sections.enrollment']}
+
+    output_attributes = set(['courses.dept', 'courses.course_num'])
     for key in dic_input:
-        input_filters.append(map_input_to_operation[key])
+        output_attributes.update(map_input_to_output_attributes[key])
+
+    attribute_list = sorted(list(output_attributes), key=lambda x:ouput_order[x])
+
+    selection = 'SELECT ' + ", ".join(attribute_list)
+
+    return selection  
+
+
+def determine_where_statement(dic_input, tables_to_access, sorted_input_keys):
+
+
+    map_input_to_operation = {'terms': 'catalog_index.word IN ?',
+                            'dept': 'courses.dept = ?',
+                            'day' : 'meeting_patterns.day IN ?',
+                            'time_start': 'meeting_patterns.time_start >= ?',
+                            'walking_time': '******',
+                            'building' : '******',
+                            'time_end': 'meeting_patterns.time_end <= ?', 
+                            'enroll_lower': 'sections.enrollment >= ?',
+                            'enroll_upper': 'sections.enrollment <= ?'}
     
-    return input_filters
+   
+
+    filter_list = []
+    
+    for key in sorted_input_keys:
+
+        if key == 'terms':
+            if not tables_to_access:
+                group_by_statement = ' GROUP BY courses.course_id HAVING COUNT (*) = ?' 
+            else:
+                group_by_statement = ' GROUP BY sections.section_id HAVING COUNT (*) = ?' 
+
+ 
+        filter_list.append(map_input_to_operation[key])
+
+
+    where_statement = ' WHERE ' + " AND ".join(filter_list)
+
+    if "terms" in dic_input:
+        where_statement = where_statement + group_by_statement
+        
+    
+    return where_statement
+
+'''  
+    map_output_to_table = {'
+    dept': 'courses', 'courses.course_num': 'courses', 'sections.section_id': 'sections', 
+                   'meeting_patterns.day': 'meeting_patterns', 'meeting_patterns.time_start': 'meeting_patterns', 
+                   'meeting_patterns.time_end': 'meeting_patterns', 'gps.building': 'gps', 'walking_time': 'gps', 
+                'sections.enrollment': 'sections', 'courses.title': 'sections'}
+'''
+
+def find_tuple_of_arguments(dic_input, sorted_input_keys):
+    arguments = ()
+    
+    for key in sorted_input_keys:
+        
+
+
+        if key == 'terms':
+            terms_split = dic_input[key].split()
+            required_count = len(terms_split)
+            query_words = "('" + "','".join(terms_split) + "')"
+            arguments = arguments + (query_words,)
+
+        elif key == 'day':
+            query_days = "('" + "','".join(dic_input[key]) + "')"
+            arguments = arguments + (query_days,)
 
 def order_input(dic_input):
     order_dict_key = {'dept': 1, 'course_num': 2, 'section_num': 3, 'day': 4, 
@@ -199,13 +285,23 @@ def order_input(dic_input):
 
     ordered_input = sorted(dic_input.key(), key=lambda x:order_dict_key[x])
     return ordered_input
+        else:
+            arguments = arguments + (dic_input[key],)
 
+
+    if "terms" in sorted_input_keys:
+        arguments = arguments + (required_count,)
+    
+    return arguments
 
 def generate_query(dic_input):
     """
     selection part done
 
     """
+    input_order = {'terms': 1, 'dept': 2, 'day': 3, 'time_start': 4, 
+                'time_end': 5, 'walking_time': 6, 'building': 7, 'enroll_lower': 8, 
+                'enroll_upper': 9}
 
    
 
@@ -213,6 +309,17 @@ def generate_query(dic_input):
                    'meeting_patterns.day': 'meeting_patterns', 'meeting_patterns.time_start': 'meeting_patterns', 
                    'meeting_patterns.time_end': 'meeting_patterns', 'gps.building': 'gps', 'walking_time': 'gps', 
                 'sections.enrollment': 'sections', 'courses.title': 'sections'}
+    sorted_input_keys = sorted(dic_input.keys(), key=lambda x:input_order[x])
+
+    map_input_to_tables_needed = {'terms': ['catalog_index'], 
+                            'dept':[],
+                            'day' : ['sections', 'meeting_patterns'], 
+                            'time_start': ['sections', 'meeting_patterns'],
+                            'time_end': ['sections', 'meeting_patterns'],
+                            'building': ['sections', 'meeting_patterns', 'gps'],
+                            'enroll_lower': ['sections', 'meeting_patterns'],
+                            'enroll_upper': ['sections', 'meeting_patterns']}
+    
 
     map_primary_foreign_keys = {'sections': "courses.course_id = sections.course_id",
                                 'meeting_patterns': "sections.meeting_pattern_id = meeting_patterns.meeting_pattern_id",
@@ -221,38 +328,48 @@ def generate_query(dic_input):
 
     
     ordered_input = ordered_input(dic_input)
-
-    attribute_list = determine_output_attributes(dic_input)
-    selection = 'SELECT ' + ", ".join(attribute_list)
-
-    filter_list = determine_where_filters(dic_input)
-    where_statement = ' WHERE ' + " AND ".join(filter_list)
-
+        
+    arguments = find_tuple_of_arguments(dic_input, sorted_input_keys)
 
     tables_to_access = set()
-    for attribute in attribute_list:
-        if map_output_to_table[attribute] != 'courses':
-            tables_to_access.add(map_output_to_table[attribute])
+    for key in dic_input:
+        tables_to_access.update(map_input_to_tables_needed[key])
 
-    if not tables_to_access:
+    selection_statement = determine_output_attributes(dic_input)   
+    where_statement = determine_where_statement(dic_input, tables_to_access, sorted_input_keys)    
+    from_statement = ' FROM courses '
 
-        from_statement = ' FROM courses '
-        final_query = selection + from_statement + where_statement + ";"
-       
-    else:
-        from_join_statement = ' FROM courses JOIN ' + " JOIN ".join(list(tables_to_access))
+    
 
-        on_list = []
+    if tables_to_access:
+        
         for table in tables_to_access:
-            on_list.append(map_primary_foreign_keys[table])
-        on_statement = ' ON ' + ' AND '.join(on_list) 
+        
+        #from_join_statement = ' FROM courses JOIN ' + " JOIN ".join(list(tables_to_access))
 
-        final_query = selection + from_join_statement + on_statement + where_statement + ";"
+            
+            if table == 'gps':
+                from_statement = from_statement + ' JOIN ' + table + ' AS A ON ' + map_primary_foreign_keys[table]
+                from_statement = from_statement + ' JOIN ' + table + ' AS B ON ' + map_primary_foreign_keys[table]
+
+            else:
+                from_statement = from_statement + ' JOIN ' + table + ' ON ' + map_primary_foreign_keys[table]
+
+        #on_list = []
+        
+        #for table in tables_to_access:
+        #    #on_list.append(map_primary_foreign_keys[table])
+        #    if table = 'gps':
+        #        on_list.append(map_primary_foreign_keys[table])
+
+        #on_statement = ' ON ' + ' AND '.join(on_list) 
+
+        #final_query = selection + from_join_statement + on_statement + where_statement + ";"
+
+    final_query = selection_statement + from_statement + where_statement + ";"
 
 
-
-
-    return final_query
+    return final_query, arguments
 
 
 
@@ -260,13 +377,60 @@ def generate_query(dic_input):
 
 
 def go():
-    ex0 = determine_output_attributes(example_0)
-    print(ex0)
+    #ex0 = determine_output_attributes(example_0)
+    #print(ex0)
+    #print()
+    #ex1 = determine_output_attributes(example_1)
+    #print(ex1)
+    #print()
+    yy = generate_query(example_0)
+    print("---ex0 query follows")
+    print(yy)
     print()
-    ex1 = determine_output_attributes(example_1)
-    print(ex1)
-    print("---")
+    print("---ex1 query follows------")
     zz = generate_query(example_1)
     print(zz)
+    print()
+    #print("---ex2 query follows------")
+    #zzz = generate_query(example_2)
+    #print(zzz)
 
->>>>>>> 28ad2a174042d45071c137463aafded8783b967e
+
+"""
+example_2 = {"dept":"CMSC",
+             "day":["MWF", "TR"],
+             "time_start":1030,
+             "time_end":1500,
+             "enroll_lower":20,
+             "terms":"computer science"}
+
+SELECT courses.dept, courses.course_num, 
+sections.section_id, meeting_patterns.day, meeting_patterns.time_start, 
+meeting_patterns.time_end, sections.enrollment, courses.title 
+FROM courses JOIN meeting_patterns 
+JOIN catalog_index 
+JOIN sections 
+ON sections.meeting_pattern_id = meeting_patterns.meeting_pattern_id 
+AND courses.course_id = catalog_index.course_id 
+AND courses.course_id = sections.course_id 
+WHERE meeting_patterns.time_start >= 1030
+AND meeting_patterns.time_end <= 1500
+AND meeting_patterns.day IN ('MWF','TR') 
+AND courses.dept = 'CMSC'
+AND catalog_index.word IN ('computer','science') 
+GROUP BY sections.section_id HAVING COUNT (*) = 2;
+
+SELECT courses.dept, courses.course_num, 
+sections.section_id, meeting_patterns.day, meeting_patterns.time_start, 
+meeting_patterns.time_end, sections.enrollment, courses.title 
+FROM courses JOIN meeting_patterns 
+JOIN catalog_index 
+JOIN sections 
+ON sections.meeting_pattern_id = meeting_patterns.meeting_pattern_id 
+AND courses.course_id = catalog_index.course_id 
+AND courses.course_id = sections.course_id 
+AND meeting_patterns.day IN ('MWF','TR') 
+AND courses.dept = 'CMSC'
+AND catalog_index.word IN ('computer','science') 
+GROUP BY sections.section_id HAVING COUNT (*) = 2;
+"""
