@@ -1,6 +1,7 @@
 ### CS122, Winter 2017: Course search engine: search
 ###
-### Steven Cooklev & Shrab-daddy Timsina
+
+### Steven Cooklev & Shrabya Timsina
 
 
 from math import radians, cos, sin, asin, sqrt
@@ -38,34 +39,40 @@ def find_courses(args_from_ui):
     # of query results.
 
     connection = sqlite3.connect(DATABASE_FILENAME)
-
-    cursor = connection.cursor()
-
-    c = generate_query(args_from_ui)
-
-    access_object = cursor.execute(c, args)
-    connection = sqlite3.connect(DATABASE_FILENAME)
     connection.create_function("time_between", 4, compute_time_between)
     cursor = connection.cursor()
 
-    (query_string, arguments) = generate_query(args_from_ui)
-    print(query_string)
-    print()
-    print(arguments)
-    print()
+    if 'building' in args_from_ui:
+        query_lon_lat = "SELECT lon, lat FROM gps WHERE building_code = ?"
+        lon_lat = cursor.execute(query_lon_lat, (args_from_ui['building'],))
+        lon_lat_as_list = lon_lat.fetchall()
+        lon_lat_as_tuple = lon_lat_as_list[0]
+    else:
+        lon_lat_as_tuple = tuple()
+
+
+    (query_string, arguments) = generate_query(args_from_ui, lon_lat_as_tuple)
+    #print(query_string)
+    #print(query_string)
+    #print()
+    #print(arguments)
+    #print()
     resulting_table = cursor.execute(query_string, arguments)
-    print(resulting_table.fetchall())
-
-
-
-
-
-
+    resulting_table_as_list = resulting_table.fetchall()
+    #print(resulting_table_as_list)
+    #print(get_header(cursor))
     
+    if not resulting_table_as_list:
+        header = []
+    else:
+        header = get_header(cursor)
 
 
+    #print(header)
 
-    return ([], [])
+
+    return (header, resulting_table_as_list)
+
 
 
 ########### auxiliary functions #################
@@ -138,6 +145,7 @@ example_0 = {"time_start":930,
              "day":["MWF"]}
 
 example_1 = {"building":"RY",
+             "walking_time": 10,
              "dept":"CMSC",
              "day":["MWF", "TR"],
              "time_start":1030,
@@ -145,23 +153,15 @@ example_1 = {"building":"RY",
              "enroll_lower":20,
              "terms":"computer science"}
 
-args_from_ui = {"dept":"CMSC",
+example_2 = {"dept":"CMSC",
              "day":["MWF", "TR"],
              "time_start":1030,
              "time_end":1500,
              "enroll_lower":20,
              "terms":"computer science"}
 
-'''
-obtain connections and cursor for database
-loop through input keys and get output attributes
-this will determine the SELECT statement of the query 
-generate query string based on input 
-this generates the WHERE statement of the query
-FROM and ON statements remain constaint (generally)
-c.execute(query, args)
+eg = {"terms":"biodiversity"}
 
-'''
 
 def determine_output_attributes(dic_input):
     '''
@@ -176,8 +176,9 @@ def determine_output_attributes(dic_input):
     
     ouput_order = {'courses.dept': 1, 'courses.course_num': 2, 'sections.section_id': 3, 
                    'meeting_patterns.day': 4,'meeting_patterns.time_start': 5, 
-                   'meeting_patterns.time_end': 6, 'gps.building': 7, 
-                   'walking_time': 8,'sections.enrollment': 9, 'courses.title': 10}
+                   'meeting_patterns.time_end': 6, 'gps.building_code': 7, 
+                   'time_between(gps.lon, gps.lat, ?, ?) AS walking_time': 8,
+                   'sections.enrollment': 9, 'courses.title': 10}
 
     map_input_to_output_attributes = {'terms': ['courses.title'], 
                             'dept':['courses.title'],
@@ -190,14 +191,10 @@ def determine_output_attributes(dic_input):
                             'time_end': ['sections.section_id', 'meeting_patterns.day', 
                                           'meeting_patterns.time_start', 
                                           'meeting_patterns.time_end'],
-                            'building': ['sections.section_id', 'meeting_patterns.day', 
-                                         'meeting_patterns.time_start', 
-                                          'meeting_patterns.time_end', 'gps.building', 
-                                          'walking_time'],
                             'walking_time': ['sections.section_id', 'meeting_patterns.day', 
                                          'meeting_patterns.time_start', 
-                                          'meeting_patterns.time_end', 'gps.building', 
-                                          'walking_time'],
+                                          'meeting_patterns.time_end', 'gps.building_code', 
+                                          'time_between(gps.lon, gps.lat, ?, ?) AS walking_time'],
                             'enroll_lower': ['sections.section_id', 'meeting_patterns.day', 
                                             'meeting_patterns.time_start', 'meeting_patterns.time_end', 
                                             'sections.enrollment'],
@@ -206,7 +203,11 @@ def determine_output_attributes(dic_input):
                                             'sections.enrollment']}
 
     output_attributes = set(['courses.dept', 'courses.course_num'])
+    
     for key in dic_input:
+        if key == 'building':
+            continue
+
         output_attributes.update(map_input_to_output_attributes[key])
 
     attribute_list = sorted(list(output_attributes), key=lambda x:ouput_order[x])
@@ -219,12 +220,12 @@ def determine_output_attributes(dic_input):
 def determine_where_statement(dic_input, tables_to_access, sorted_input_keys):
 
 
-    map_input_to_operation = {'terms': 'catalog_index.word IN ?',
+    map_input_to_operation = {'terms': 'catalog_index.word IN',
                             'dept': 'courses.dept = ?',
-                            'day' : 'meeting_patterns.day IN ?',
+                            'day' : 'meeting_patterns.day IN',
                             'time_start': 'meeting_patterns.time_start >= ?',
-                            'walking_time': '******',
-                            'building' : '******',
+                            #'building': 'A.building_code = ?',
+                            'walking_time': 'walking_time <= ?',
                             'time_end': 'meeting_patterns.time_end <= ?', 
                             'enroll_lower': 'sections.enrollment >= ?',
                             'enroll_upper': 'sections.enrollment <= ?'}
@@ -234,15 +235,36 @@ def determine_where_statement(dic_input, tables_to_access, sorted_input_keys):
     filter_list = []
     
     for key in sorted_input_keys:
+        if key == 'building':
+            continue
 
-        if key == 'terms':
-            if not tables_to_access:
-                group_by_statement = ' GROUP BY courses.course_id HAVING COUNT (*) = ?' 
+        elif key == 'terms':
+            
+            terms_split = dic_input[key].split()
+            required_count = len(terms_split)
+            required_placeholders = ["?"] * required_count
+
+            query_placeholders = " (" + ", ".join(required_placeholders) + ")"
+            pass_to_query = map_input_to_operation[key] + query_placeholders
+            filter_list.append(pass_to_query)
+            #print(tables_to_access)
+
+            if 'sections' in tables_to_access:
+                group_by_statement = ' GROUP BY sections.section_id HAVING COUNT (*) = ?'
             else:
-                group_by_statement = ' GROUP BY sections.section_id HAVING COUNT (*) = ?' 
+                group_by_statement = ' GROUP BY courses.course_id HAVING COUNT (*) = ?' 
 
- 
-        filter_list.append(map_input_to_operation[key])
+
+        elif key == 'day':
+            required_count = len(dic_input[key])
+            required_placeholders = ["?"] * required_count
+
+            query_placeholders = " (" + ", ".join(required_placeholders) + ")"
+            pass_to_query = map_input_to_operation[key] + query_placeholders
+            filter_list.append(pass_to_query)
+
+        else:
+            filter_list.append(map_input_to_operation[key])
 
 
     where_statement = ' WHERE ' + " AND ".join(filter_list)
@@ -253,38 +275,24 @@ def determine_where_statement(dic_input, tables_to_access, sorted_input_keys):
     
     return where_statement
 
-'''  
-    map_output_to_table = {'
-    dept': 'courses', 'courses.course_num': 'courses', 'sections.section_id': 'sections', 
-                   'meeting_patterns.day': 'meeting_patterns', 'meeting_patterns.time_start': 'meeting_patterns', 
-                   'meeting_patterns.time_end': 'meeting_patterns', 'gps.building': 'gps', 'walking_time': 'gps', 
-                'sections.enrollment': 'sections', 'courses.title': 'sections'}
-'''
 
-def find_tuple_of_arguments(dic_input, sorted_input_keys):
-    arguments = ()
+def find_tuple_of_arguments(dic_input, sorted_input_keys, lon_lat_of_building):
+    arguments = lon_lat_of_building
     
     for key in sorted_input_keys:
+        if key == 'building':
+            continue
         
-
-
-        if key == 'terms':
-            terms_split = dic_input[key].split()
+        elif key == 'terms':
+            terms_split = dic_input[key].lower().split()
             required_count = len(terms_split)
-            query_words = "('" + "','".join(terms_split) + "')"
-            arguments = arguments + (query_words,)
+            
+            arguments = arguments + tuple(terms_split)
 
         elif key == 'day':
-            query_days = "('" + "','".join(dic_input[key]) + "')"
-            arguments = arguments + (query_days,)
+            
+            arguments = arguments + tuple(dic_input[key])
 
-def order_input(dic_input):
-    order_dict_key = {'dept': 1, 'course_num': 2, 'section_num': 3, 'day': 4, 
-                'time_start': 5, 'time_end': 6, 'building': 7, 'walking_time': 8, 
-                'enroll_lower': 9, 'enroll_upper': 10 'title': 11}
-
-    ordered_input = sorted(dic_input.key(), key=lambda x:order_dict_key[x])
-    return ordered_input
         else:
             arguments = arguments + (dic_input[key],)
 
@@ -294,29 +302,22 @@ def order_input(dic_input):
     
     return arguments
 
-def generate_query(dic_input):
-    """
-    selection part done
 
-    """
+def generate_query(dic_input, lon_lat_of_building):
+
     input_order = {'terms': 1, 'dept': 2, 'day': 3, 'time_start': 4, 
-                'time_end': 5, 'walking_time': 6, 'building': 7, 'enroll_lower': 8, 
-                'enroll_upper': 9}
+                'time_end': 5, 'walking_time': 6,  'enroll_lower': 7, 
+                'enroll_upper': 8}
 
-   
 
-    map_output_to_table = {'courses.dept': 'courses', 'courses.course_num': 'courses', 'sections.section_id': 'sections', 
-                   'meeting_patterns.day': 'meeting_patterns', 'meeting_patterns.time_start': 'meeting_patterns', 
-                   'meeting_patterns.time_end': 'meeting_patterns', 'gps.building': 'gps', 'walking_time': 'gps', 
-                'sections.enrollment': 'sections', 'courses.title': 'sections'}
-    sorted_input_keys = sorted(dic_input.keys(), key=lambda x:input_order[x])
+    sorted_input_keys = sorted(dic_input.keys() - ['building'], key=lambda x:input_order[x])
 
     map_input_to_tables_needed = {'terms': ['catalog_index'], 
                             'dept':[],
                             'day' : ['sections', 'meeting_patterns'], 
                             'time_start': ['sections', 'meeting_patterns'],
                             'time_end': ['sections', 'meeting_patterns'],
-                            'building': ['sections', 'meeting_patterns', 'gps'],
+                            'walking_time': ['sections', 'meeting_patterns', 'gps'],
                             'enroll_lower': ['sections', 'meeting_patterns'],
                             'enroll_upper': ['sections', 'meeting_patterns']}
     
@@ -326,13 +327,13 @@ def generate_query(dic_input):
                                 'gps': 'sections.building_code = gps.building_code',
                                 'catalog_index': 'courses.course_id = catalog_index.course_id'}
 
-    
-    ordered_input = ordered_input(dic_input)
         
-    arguments = find_tuple_of_arguments(dic_input, sorted_input_keys)
+    arguments = find_tuple_of_arguments(dic_input, sorted_input_keys, lon_lat_of_building)
 
     tables_to_access = set()
     for key in dic_input:
+        if key == 'building':
+            continue
         tables_to_access.update(map_input_to_tables_needed[key])
 
     selection_statement = determine_output_attributes(dic_input)   
@@ -344,27 +345,7 @@ def generate_query(dic_input):
     if tables_to_access:
         
         for table in tables_to_access:
-        
-        #from_join_statement = ' FROM courses JOIN ' + " JOIN ".join(list(tables_to_access))
-
-            
-            if table == 'gps':
-                from_statement = from_statement + ' JOIN ' + table + ' AS A ON ' + map_primary_foreign_keys[table]
-                from_statement = from_statement + ' JOIN ' + table + ' AS B ON ' + map_primary_foreign_keys[table]
-
-            else:
-                from_statement = from_statement + ' JOIN ' + table + ' ON ' + map_primary_foreign_keys[table]
-
-        #on_list = []
-        
-        #for table in tables_to_access:
-        #    #on_list.append(map_primary_foreign_keys[table])
-        #    if table = 'gps':
-        #        on_list.append(map_primary_foreign_keys[table])
-
-        #on_statement = ' ON ' + ' AND '.join(on_list) 
-
-        #final_query = selection + from_join_statement + on_statement + where_statement + ";"
+            from_statement = from_statement + ' JOIN ' + table + ' ON ' + map_primary_foreign_keys[table]
 
     final_query = selection_statement + from_statement + where_statement + ";"
 
@@ -376,6 +357,9 @@ def generate_query(dic_input):
 
 
 
+
+
+"""
 def go():
     #ex0 = determine_output_attributes(example_0)
     #print(ex0)
@@ -391,12 +375,12 @@ def go():
     zz = generate_query(example_1)
     print(zz)
     print()
+
     #print("---ex2 query follows------")
     #zzz = generate_query(example_2)
     #print(zzz)
 
 
-"""
 example_2 = {"dept":"CMSC",
              "day":["MWF", "TR"],
              "time_start":1030,
@@ -433,4 +417,19 @@ AND meeting_patterns.day IN ('MWF','TR')
 AND courses.dept = 'CMSC'
 AND catalog_index.word IN ('computer','science') 
 GROUP BY sections.section_id HAVING COUNT (*) = 2;
+"""
+
+"""
+connection = sqlite3.connect(DATABASE_FILENAME)
+connection.create_function("time_between", 4, compute_time_between)
+cursor = connection.cursor()
+s = "SELECT a.building_code, b.building_code, time_between(a.lon, a.lat, b.lon, b.lat) AS walking_time FROM gps AS a JOIN gps AS b WHERE a.building_code = 'RY' AND walking_time <= 10"
+
+
+
+st = 'SELECT courses.dept, courses.course_num, sections.section_id, meeting_patterns.day, meeting_patterns.time_start, meeting_patterns.time_end, A. building_code, B.building_code, time_between(A.lon, A.lat, B.lon, B.lat) AS walking_time, sections.enrollment, courses.title FROM courses  JOIN meeting_patterns ON sections.meeting_pattern_id = meeting_patterns.meeting_pattern_id JOIN catalog_index ON courses.course_id = catalog_index.course_id JOIN sections ON courses.course_id = sections.course_id JOIN gps AS A ON sections.building_code = A.building_code JOIN gps AS B ON sections.building_code = B.building_code WHERE catalog_index.word IN (?, ?) AND courses.dept = ? AND meeting_patterns.day IN (?, ?) AND meeting_patterns.time_start >= ? AND meeting_patterns.time_end <= ? AND A.building_code = ? AND sections.enrollment >= ? GROUP BY sections.section_id HAVING COUNT (*) = ?;'
+args = ('computer', 'science', 'CMSC', 'MWF', 'TR', 1030, 1500, 'RY',20, 2)
+resulting_table = cursor.execute(st, args)
+resulting_table_as_list = resulting_table.fetchall()
+print(resulting_table_as_list)
 """
