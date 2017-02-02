@@ -9,7 +9,6 @@ import json
 import re
 import os
 
-
 # Use this filename for the database
 DATA_DIR = os.path.dirname(__file__)
 DATABASE_FILENAME = os.path.join(DATA_DIR, 'course-info.db')
