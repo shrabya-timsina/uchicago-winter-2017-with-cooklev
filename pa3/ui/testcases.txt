@@ -1,0 +1,83 @@
+====================================
+Test name: empty
+Input: {}
+2.0/2.0 points
+
+
+====================================
+Test name: dept-only
+Input: {'dept': 'CMSC'}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: dept-time
+Input: {'time_end': 1500, 'dept': 'CMSC', 'time_start': 1030}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: dept-enroll
+Input: {'dept': 'CMSC', 'enroll_upper': 100, 'enroll_lower': 30}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: dept-walking-time
+Input: {'walking_time': 10, 'dept': 'CMSC', 'building': 'RY'}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: dept-day-1
+Input: {'dept': 'CMSC', 'day': ['MWF', 'CMSC', 'CMSC']}
+Test succeeded
+1.0/1.0 points
+
+
+====================================
+Test name: dept-day-2
+Input: {'dept': 'CMSC', 'day': ['MWF', 'TR', 'CMSC', 'CMSC']}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: dept-all
+Input: {'enroll_upper': 100, 'time_end': 1500, 'walking_time': 10, 'building': 'RY', 'dept': 'CMSC', 'time_start': 1030, 'day': ['MWF', 'TR', 30, 10, 'CMSC', 1500, 1030, 100, 1030, 100, 'CMSC', 30, 10, 1500], 'enroll_lower': 30}
+Test succeeded
+3.0/3.0 points
+
+
+====================================
+Test name: terms-visual-language-objects
+Input: {'terms': 'visual language objects'}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: terms-hadoop
+Input: {'terms': 'hadoop'}
+Test succeeded
+2.0/2.0 points
+
+
+====================================
+Test name: terms-foo
+Input: {'terms': 'foo'}
+2.0/2.0 points
+
+
+====================================
+Test name: dept-all-terms
+Input: {'terms': 'science mathematics economics', 'enroll_upper': 100, 'time_end': 1500, 'walking_time': 10, 'building': 'RY', 'dept': 'CMSC', 'time_start': 900, 'day': ['MWF', 'TR', 30, 10, 'CMSC', 1500, 900, 100, 900, 100, 'CMSC', 30, 10, 1500], 'enroll_lower': 30}
+Test succeeded
+3.0/3.0 points
+
+
+Total: 25.0/25.0
