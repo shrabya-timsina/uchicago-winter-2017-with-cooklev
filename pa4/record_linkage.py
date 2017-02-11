@@ -17,9 +17,30 @@ def find_matches(mu, lambda_, outfile='./matches.csv', block_on=None):
     #
     # ----------------- YOUR CODE HERE ------------------------
     #
+    
+    zagat = create_df(zagat_file)
+    fodors = create_df(fodor_file)
+
 
     return (0, 0, 0)
   
+
+def create_df(file_name):
+    df = pandas.read_fwf(file_name, header = None)[0]
+    first_split = df.str.extract(r'^([^\d]*)(\d.*)$', expand=True)
+    df = pandas.concat([df, first_split], axis=1)
+    df.columns = ['original_string', 'restaurant_name', 'address_city']
+    second_split = df['address_city'].str.extract(r'(\d.*\.)(.*)$', expand=True)
+    del df['address_city']
+    df = pandas.concat([df, second_split], axis=1)
+    df.columns = ['original_string', 'restaurant_name', 'address', 'city']
+    return df
+
+
+
+
+
+
     
 if __name__ == '__main__':
 
