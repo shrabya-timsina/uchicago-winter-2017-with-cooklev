@@ -9,7 +9,7 @@ import jellyfish
 import util
 import re
 
-#identify suffix first from left
+#identify the first suffix
 street_suffixes = ['Blvd.','St.','Ave.','Dr.','Rd.','Pkwy.','Sq.','Hwy.','Ln.','Pl.']
 
 ##fail the first split:
@@ -67,13 +67,75 @@ def create_df(file_name):
     df = pd.concat([df, second_split], axis=1)
     df.columns = ['original_string', 'restaurant_name', 'address', 'city']
     df.to_csv(file_name + "_csv")
-    #return df
+    return df
+    # hard_code rows to the end of the df ?
 
 
+def create_matches_df():
+    '''
+    Read in the known_pairs text file and generate a 
+    '''
+    zagat = create_df('zagat.txt')
+    fodors = create_df('fodors.txt')
+    with open('known_pairs.txt', "r") as f:
+        array = []
+        for line in f:
+            array.append(line.rstrip('\n').rstrip('#')) 
+        array = [x for x in array if x != '']
+        array = array[3:]
+        for idx, text in enumerate(array):
+            if len(text) < 25: # I checked that this 
+                                # length corresponds to an addition meant to be on the previous line
+                array[idx-1] += array[idx]
+                array[idx] = ''
+            elif text.strip() == 'Square Shopping Center Atlanta':
+                array[idx-1] += array[idx]
+                array[idx] = ''
+        array = [x for x in array if x != '']
 
-
-
+    zag = array[0::2]
+    fod = array[1::2]
     
+
+    match_dict = {'zagat': zag, 'fodors': fod}
+    match_df = pd.DataFrame(match_dict, columns = ['zagat', 'fodors'])
+    
+
+    # add two columns, the index for each zagat and fodors
+    # output it to a csv?
+    return match_df
+
+
+def create_unmatches_df():
+    zagat = create_df('zagat.txt')
+    fodors = create_df('fodors.txt')
+    zag = zagat.sample(1000, replace = True, random_state = 1234)['original_string'].tolist() # remove random_states once debugged
+    fod = fodors.sample(1000, replace = True, random_state = 1234)['original_string'].tolist() 
+    # sometimes fod has value NaN. why?
+    # add two columns: the fodors index and the zagat index
+    unmatch_dict = {'zagat': zag, 'fodors': fod}
+    unmatch_df = pd.DataFrame(unmatch_dict, columns = ['zagat', 'fodors'])
+    return unmatch_df
+
+def score_vector(df):
+    score_vector = [] # list of triples (restaurant_name, address, city)
+    for row in df.rows:
+        score_vector.append(jellyfish.jaro_winkler(df['zagat'], df['fodors']))
+    return score_vector
+    
+def histogram(score_vector, title):
+
+    plt.hist(score_vector)
+    plt.title(title)
+    plt.xlabel("Jaro-Winkler Score")
+    plt.ylabel("Frequency")
+
+    fig = plt.gcf()
+    plt.show()
+
+
+
+'''
 if __name__ == '__main__':
 
     num_m, num_p, num_u = find_matches(0.005, 0.005, './matches.csv', 
@@ -81,3 +143,4 @@ if __name__ == '__main__':
 
     print('Found {} matches, {} possible matches, and {} ' 
               'unmatches with no blocking.'.format(num_m, num_p, num_u))
+'''
