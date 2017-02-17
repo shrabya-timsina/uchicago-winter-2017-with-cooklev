@@ -252,12 +252,25 @@ def histogram():
     plt.title("Cities from Matches", fontsize = 12)
     plt.xlabel("Jaro-Winkler Score", fontsize = 8)
     plt.ylabel("Frequency", fontsize = 8)
+<<<<<<< HEAD
 
     plt.subplot(326)
     plt.hist(u_city_vector)
     plt.title("Cities from Unmatches", fontsize = 12)
     plt.xlabel("Jaro-Winkler Score", fontsize = 8)
     plt.ylabel("Frequency", fontsize = 8)
+=======
+
+    plt.subplot(326)
+    plt.hist(u_city_vector)
+    plt.title("Cities from Unmatches", fontsize = 12)
+    plt.xlabel("Jaro-Winkler Score", fontsize = 8)
+    plt.ylabel("Frequency", fontsize = 8)
+
+
+    plt.tight_layout()
+    plt.savefig('histograms.pdf')
+>>>>>>> bc52c06ae9b89301f2a39297e64dc9c413f8c8c1
 
 
     plt.tight_layout()
