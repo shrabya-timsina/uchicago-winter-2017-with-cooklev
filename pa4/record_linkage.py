@@ -263,7 +263,57 @@ def histogram():
     plt.tight_layout()
     plt.savefig('histograms.pdf')
 
+def calc_relative_freq(score_vector_jw, score_vector_jw):
 
+    '''
+    Given a list of score vectors, will compute relative frequencies of each type of vector.
+    '''
+    vector_dic = {} # will be a dictionary with key-pair values of vectors and relative frequencies. Will
+                    # only contain vectors with nonzero relative frequency
+    denom = len(score_vector_jw)
+    for vector in score_vector_jw:
+        vector_dic.get(vector, 0) += (1/denom)
+
+    return vector_dic
+
+all_vectors = [(1,1,1), (1,1,2), (1,1,0), (2,1,1), (2,1,2), (2,1,0), (0,1,1), (0,1,2), (0,1,0),
+(1,2,1), (1,2,2), (1,2,0), (2,2,1), (2,2,2), (2,2,0), (0,2,1), (0,2,2), (0,2,0), 
+(1,0,1), (1,0,2), (1,0,0), (2,0,1), (2,0,2), (2,0,0), (0,0,1), (0,0,2), (0,0,0)]
+
+def partition_vectors(m_vector_dic, u_vector_dic, mu, lambda_): # mu is false positive rate. lambda is false negative rate
+    '''
+    Given vector dictionaries of relative frequencies of a match and unmatch, partitions 
+    the vectors into three sets: match_vectors, possible_vectors, unmatch_vectors
+    '''
+    m_vector_list = sorted(vector_dic.items(), key=lambda x: x[1], reverse = True) # list of tuples sorted ascending, by highest matched frquency
+    u_vector_list = sorted(vector_dic.items(), key=lambda x: x[1]) # sort descending, by lowest unmatched relative frequency
+
+    # m_w_over_u_w = [(x,m/u) for (x, m) in m_vector_list and (x, u) in u_vector_list] Cheeky idea.
+    match_vectors = set()
+    possible_vectors = set()
+    unmatch_vectors = set()
+    mu_threshold = 0
+    lambda_threshold = 0
+
+
+    for vector in all_vectors:
+        if vector not in m_vector_list and not in u_vector_list:
+            possible_vectors.add(vector)
+        elif vector in m_vector_list and not in u_vector_list:
+            match_vectors.add(vector)
+        elif vector in m_vector_list and in u_vector_list:
+            if mu_threshold <= mu:
+                match_vectors.add(vector)
+                mu_threshold += u_vector_list[u_vector_list.index(vector, u_vector_dic[vector])][1]
+            elif lambda_threshold <= lambda_:
+                unmatch_vectors.add(vector)
+                lambda_threshold += m_vector_list[m_vector_list.index(vector, m_vector_dic[vector])][1]
+
+    if vector not in match_vectors and not in possible_vectors and not in unmatch_vectors:
+        possible_vectors.add(vector)
+
+
+    assert len(match_vectors) + len(possible_vectors) + len(unmatch_vectors) = 27
 
 '''
 if __name__ == '__main__':
