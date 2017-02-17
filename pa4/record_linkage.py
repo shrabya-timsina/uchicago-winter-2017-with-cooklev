@@ -10,7 +10,7 @@ import util
 import re
 
 #identify the first suffix
-street_suffixes = ['Blvd.','St.','Ave.','Dr.','Rd.','Pkwy.','Sq.','Hwy.','Ln.','Pl.']
+street_suffixes = ['Blvd.','St.','Ave.','Dr.','Rd.','Pkwy.','Sq.','Hwy.','Ln.','Pl.', 'Way', 'PCH', 'fl.', 'Circle']
 
 ##fail the first split:
 #zagat: Oyster Bar lower level New York City, 21 Club 21 W. 52nd St. New York City
@@ -33,21 +33,32 @@ street_suffixes = ['Blvd.','St.','Ave.','Dr.','Rd.','Pkwy.','Sq.','Hwy.','Ln.','
 #McCormick & Kuleto's Ghirardelli Sq. San Francisco
 #Splendido Embarcadero 4 San Francisco - rest_name is Slendido, add is embarcadero 4
 
+def go():
+    zagat_file = 'zagat.txt'
+    fodor_file = 'fodors.txt'
+    pairs_file = 'known_pairs.txt'
+    zagat = create_df(zagat_file)
+    fodors = create_df(fodor_file)
+    matches = create_matches_df(zagat, fodors, pairs_file)
+    unmatches = create_unmatches_df(zagat, fodors)
 
-
+    a,b = score_vectors(matches, zagat, fodors)
+    print(a)
+    print(b)
 def find_matches(mu, lambda_, outfile='./matches.csv', block_on=None):
     
-    #zagat_file = './zagat.txt'
-    #fodor_file = './fodor.txt'
-    #pairs_file = './known_pairs.txt'
+    zagat_file = 'zagat.txt'
+    fodor_file = 'fodors.txt'
+    pairs_file = 'known_pairs.txt'
 
     #
     # ----------------- YOUR CODE HERE ------------------------
     #
     
-    zagat = create_df('zagat.txt')
-    fodors = create_df('fodors.txt')
-    pairs_file = './known_pairs.txt'
+    zagat = create_df(zagat_file)
+    fodors = create_df(fodor_file)
+    matches = create_matches_df(zagat, fodors, pairs_file)
+    unmatches = create_unmatches_df(zagat, fodors)
 
 
     return (0, 0, 0)
@@ -58,33 +69,65 @@ def create_df(file_name):
     first_split = df.str.extract(r'^([^\d]*)(\d.*)$', expand=True)
     df = pd.concat([df, first_split], axis=1)
     df.columns = ['original_string', 'restaurant_name', 'address_city']
+
+    
+    if file_name == 'zagat.txt':
+        street_suffixes.extend(['Broadway', 'Walk', 'Central Park S.'])
+
+        df.iloc[73] = [df['original_string'][73],'R-23', '923 E. Third St. Los Angeles']
+        df.iloc[91] = [df['original_string'][91],'21 Club', '21 W. 52nd St. New York City']
+        df.iloc[215] = [df['original_string'][215],'103 West', '103 W. Paces Ferry Rd. Atlanta']
+
+
     #second_split = df['address_city'].str.extract(r'(\d.*\.)(.*)$', expand=True)
     #re.search(r"(?=("+'|'.join(street_suffixes)+r"))",zz)
-    address_city_pat = "^(.*("+'|'.join(street_suffixes)+r"))(.*)$"
+    
 
+
+    address_city_pat = "^(.*("+'|'.join(street_suffixes)+r"))(.*)$"
+    
     second_split = df['address_city'].str.extract(address_city_pat, expand=True)
+
+    
+
+
+
+    csv_df = pd.concat([df, second_split], axis=1)
     del second_split[1]
     del df['address_city']
     df = pd.concat([df, second_split], axis=1)
     df.columns = ['original_string', 'restaurant_name', 'address', 'city']
+
+    if file_name == 'zagat.txt':
+
+        df.iloc[150] = [df['original_string'][150],'Oyster Bar','lower level' , 'New York City',]
+        df.iloc[176] = [df['original_string'][176],'Tavern on the Green','Central Park West' , 'New York City',]
+
+        df.iloc[224] = [df['original_string'][176], df['restaurant_name'][176], '2911 S. Pharr Court', 'Atlanta']
+
+
+
+
+
+
+
     df.to_csv(file_name + "_csv")
+    csv_df.to_csv(file_name + "_csvzz")
     return df
     # hard_code rows to the end of the df ?
 
 
-def create_matches_df():
+def create_matches_df(zagat, fodors, pairs_file):
     '''
     Read in the known_pairs text file and generate a 
     '''
-    zagat = create_df('zagat.txt')
-    fodors = create_df('fodors.txt')
-    with open('known_pairs.txt', "r") as f:
+    with open(pairs_file, "r") as f:
         array = []
         for line in f:
             array.append(line.strip('\n').strip('#').strip()) 
         array = [x for x in array if x != '']
         array = array[2:]
-        print(array)
+        #print(array)
         for idx, text in enumerate(array):
             
             if text == "CDaniel 20 E. 76th St. New York City":
@@ -139,9 +182,7 @@ def get_index_column(original_string_list, restaurant_df):
 
 
 
-def create_unmatches_df():
-    zagat = create_df('zagat.txt')
-    fodors = create_df('fodors.txt')
+def create_unmatches_df(zagat, fodors):
     zag = zagat.sample(1000, replace = True, random_state = 1234)['original_string'].tolist() # remove random_states once debugged
     fod = fodors.sample(1000, replace = True, random_state = 1234)['original_string'].tolist() 
     # sometimes fod has value NaN. why?
@@ -151,16 +192,15 @@ def create_unmatches_df():
     
    
     unmatch_dict = {'zagat': zag, 'zag_index': zag_index, 'fodors': fod, 'fod_index': fod_index}
-    unmatch_df = pd.DataFrame(unmatch_dict, columns = ['zagat', 'zag_index', 'fodors', 'fod_index'])
-    return unmatch_df
+    unmatches = pd.DataFrame(unmatch_dict, columns = ['zagat', 'zag_index', 'fodors', 'fod_index'])
+    return unmatches
 
-def score_vectors(df):
+def score_vectors(df, zagat, fodors):
     '''
     Given a match or unmatch dataframe, generates a score_vector and returns two vectors: the jw vector
     and the jw category vector
     '''
-    zagat = create_df('zagat.txt')
-    fodors = create_df('fodors.txt')
+   
     '''
     zag_name = []
     zag_address = []
@@ -179,17 +219,22 @@ def score_vectors(df):
     for zag_key, fod_key in tup_key:
 
         zag_name = zagat.at[zag_key, 'restaurant_name']
-        fod_name = fodors.at[zag_key, 'restaurant_name']
+        fod_name = fodors.at[fod_key, 'restaurant_name']
         jelly_name = jellyfish.jaro_winkler(zag_name, fod_name)
         jw_name = util.get_jw_category(jelly_name)
         
         zag_address = zagat.at[zag_key, 'address']
-        fod_address = fodors.at[zag_key, 'address']
+        fod_address = fodors.at[fod_key, 'address']
+        print("zag",zag_address, type(zag_address))
+        print("fod",fod_address, type(fod_address))
+
         jelly_address = jellyfish.jaro_winkler(zag_address, fod_address)
+        print(jelly_address)
+        print()
         jw_address = util.get_jw_category(jelly_address)
 
         zag_city = zagat.at[zag_key, 'city']
-        fod_city = fodors.at[zag_key, 'city']
+        fod_city = fodors.at[fod_key, 'city']
         jelly_city = jellyfish.jaro_winkler(zag_city, fod_city)
         jw_city = util.get_jw_category(jelly_city)
 
@@ -263,6 +308,7 @@ def histogram():
     plt.tight_layout()
     plt.savefig('histograms.pdf')
 
+<<<<<<< HEAD
 def calc_relative_freq(score_vector_jw, score_vector_jw):
 
     '''
@@ -315,6 +361,8 @@ def partition_vectors(m_vector_dic, u_vector_dic, mu, lambda_): # mu is false po
 
     assert len(match_vectors) + len(possible_vectors) + len(unmatch_vectors) = 27
 
+=======
+>>>>>>> 6239b446717a243258f0f56f20389b0f06a1a7b8
 '''
 if __name__ == '__main__':
 
