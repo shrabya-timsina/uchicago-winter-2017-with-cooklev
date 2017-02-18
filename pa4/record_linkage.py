@@ -514,8 +514,6 @@ def count_matches(zagat, fodors, match_vectors, unmatch_vectors, outfile, block_
     matches_for_csv.to_csv(outfile)
     return match_count, possible_match_count, unmatch_count
 
-
-
 if __name__ == '__main__':
 
     num_m, num_p, num_u = find_matches(0.005, 0.005, './matches.csv', 
