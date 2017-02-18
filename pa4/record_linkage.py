@@ -58,9 +58,11 @@ def go():
     #print("u_vector_dict")
     #print(u_vector_dict)
     (match_vectors, unmatch_vectors, possible_vectors) = partition_vectors(m_vector_dict, u_vector_dict, mu, lambda_)
-    print(match_vectors)
-    print(unmatch_vectors)
-    print(possible_vectors)
+    #print(match_vectors)
+    #print(unmatch_vectors)
+    #print(possible_vectors)
+    zz = count_matches(zagat, fodors, match_vectors, unmatch_vectors, possible_vectors, None)
+    print("zz ", zz)
 
 
 def find_matches(mu, lambda_, outfile='./matches.csv', block_on=None):
@@ -139,7 +141,7 @@ def create_df(file_name):
         df.iloc[512,2:] = ['108 South Park', 'San Francisco']
         df.iloc[513,1:] = ["Splendido", 'Embarcadero 4', 'San Francisco'] 
 
-    df.to_csv(file_name + "_csv")
+    #df.to_csv(file_name + "_csv")
     #csv_df.to_csv(file_name + "_csvzz")
     return df
 
@@ -380,13 +382,13 @@ def partition_vectors(m_vector_dict, u_vector_dict, mu, lambda_): # mu is false 
             possible_vectors.add(vector)
         
         elif (vector not in m_vector_dict) and (vector in u_vector_dict):
-            if vector == (0, 1, 1):
-                print("line 1------")
+            #if vector == (0, 1, 1):
+            #    print("line 1------")
             unmatch_vectors.add(vector)
 
         elif (vector in m_vector_dict) and (vector not in u_vector_dict):
-            if vector == (0, 1, 1):
-                print("line 2------")
+            #if vector == (0, 1, 1):
+            #    print("line 2------")
             match_vectors.add(vector)
 
         elif (vector in m_vector_dict) and (vector in u_vector_dict):
@@ -397,10 +399,10 @@ def partition_vectors(m_vector_dict, u_vector_dict, mu, lambda_): # mu is false 
 
     for vector, ratio in ordered_vectors:
         if mu_moving <= mu:
-            if vector == (0, 1, 1):
-                print("line 3------")
+            #if vector == (0, 1, 1):
+            #    print("line 3------")
             match_vectors.add(vector)
-            print("wtf ", u_vector_dict[vector])
+            #print("wtf ", u_vector_dict[vector])
             mu_moving += u_vector_dict[vector]
 
     for vector, ratio in reversed(ordered_vectors):        
@@ -412,32 +414,69 @@ def partition_vectors(m_vector_dict, u_vector_dict, mu, lambda_): # mu is false 
         if (vector in ordered_vectors) and (vector not in match_vectors) and (vector not in unmatch_vectors):
             possible_vectors.add(vector)
   
-    print(len(match_vectors) + len(possible_vectors) + len(unmatch_vectors))
-    print(match_vectors)
-    print(unmatch_vectors)
-    print(possible_vectors)
+    #print(len(match_vectors) + len(possible_vectors) + len(unmatch_vectors))
+    #print(match_vectors)
+    #print(unmatch_vectors)
+    #print(possible_vectors)
     assert(len(match_vectors) + len(possible_vectors) + len(unmatch_vectors) == 27)
 
     return match_vectors, unmatch_vectors, possible_vectors
 
 
-
-def count_matches(zagat, fodors):
+def count_matches(zagat, fodors, match_vectors, unmatch_vectors, possible_vectors, block_on):
     '''
     Go through every pair in the zagat and fodors dataframes and determine counts of matches, unmatches, and
     possible matches
     '''
     match_count = 0
+    unmatch_count = 0
+    possible_match_count = 0
+    matches_for_csv = pd.DataFrame(columns=['orignal_zagat_string','orignal_fodors_string'])
 
-    for zrow_name, zrow_address, zrow_city in zagat.rows[1:4]:
-        for frow_name, frow_address, frow_city in fodors.rows[1:4]:
+
+    for z_ind, zrow in zagat.iterrows():
+        for f_ind, frow in fodors.iterrows():
+
+            zrow_name, zrow_address, zrow_city = zrow[1].strip().lower(), zrow[2].strip().lower(), zrow[3].strip().lower()
+            frow_name, frow_address, frow_city = frow[1].strip().lower(), frow[2].strip().lower(), frow[3].strip().lower()
+
+            if block_on == 'restaurant_name':
+                if zrow_name != frow_name:
+                    continue
+
+            if block_on == 'city':
+                if zrow_city != frow_city:
+                    continue
+
+            if block_on == 'address':
+                if zrow_address != frow_address:
+                    continue
+
             score_name = jellyfish.jaro_winkler(zrow_name, frow_name)
             jw_name = util.get_jw_category(score_name)
-            #...
-            jw = (jw_name, jw_address, jw_city)
-            if jw in match_vectors:
+
+            score_address = jellyfish.jaro_winkler(zrow_address, frow_address)
+            jw_address = util.get_jw_category(score_address)
+
+            score_city = jellyfish.jaro_winkler(zrow_city, frow_city)
+            jw_city = util.get_jw_category(score_city)
+
+            score_vector_jw = (jw_name, jw_address, jw_city)
+            if score_vector_jw in match_vectors:
                 match_count += 1
-    return match_count  
+                match_row = {'orignal_zagat_string': zrow[0].strip(), 'orignal_fodors_string': frow[0].strip()}
+                matches_for_csv = matches_for_csv.append(match_row, ignore_index=True)
+
+            elif score_vector_jw in unmatch_vectors:
+                unmatch_count += 1
+            else: 
+                possible_match_count += 1
+    
+    matches_for_csv.to_csv("outfile")
+    #assert(match_count+unmatch_count+possible_match_count == 27)
+    #print(match_count, unmatch_count, possible_match_count)
+    return match_count, unmatch_count, possible_match_count 
+
 
 '''
 if __name__ == '__main__':
