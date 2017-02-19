@@ -13,6 +13,11 @@ import os
 DATA_DIR = os.path.dirname(__file__)
 DATABASE_FILENAME = os.path.join(DATA_DIR, 'course-info.db')
 
+### GRADER COMMENTS
+# There were easier ways to encode  this information than
+# storing it in a bunch of global dictionaries
+# PENALTY -2 (STYLE)
+
 #used in determine_select_statement to match required output order
 ouput_order = {'courses.dept': 1, 'courses.course_num': 2, 
                'sections.section_num': 3, 'meeting_patterns.day': 4,

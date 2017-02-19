@@ -1,0 +1,37 @@
+Points:
+    time_between:
+        Points Possible: 4
+        Points Obtained: 4 
+
+    Special:
+        Points Possible: 15
+        Points Obtained: 15
+
+    WHERE clause:
+        Points Possible: 12
+        Points Obtained: 12
+
+    JOINs:
+        Points Possible: 10
+        Points Obtained: 10
+
+    Attributes:
+        Points Possible: 10
+        Points Obtained: 10
+
+    Database interaction:
+        Points Possible: 8
+        Points Obtained: 8
+
+    Code structure and style:
+        Points Possible: 20
+        Points Obtained: 18
+
+    Test cases:
+        Points Possible: 25
+        Points Obtained: 25
+
+Total Points: 102 / 104
+
+Comments: >
+    Great job!
