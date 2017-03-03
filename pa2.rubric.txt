@@ -1,0 +1,49 @@
+Points:
+    "Indexing: Maintain and write index":
+        Points Possible: 16
+        Points Obtained: 14
+
+    "Indexing: Process subsequences":
+        Points Possible: 13
+        Points Obtained: 9
+
+    "Indexing: Extract words":
+        Points Possible: 13
+        Points Obtained: 13
+
+    "Indexing: Basic processing":
+        Points Possible: 11
+        Points Obtained: 11
+
+    "Indexing: Interleaving":
+        Points Possible: 7
+        Points Obtained: 7
+
+    "Crawling: Extract urls":
+        Points Possible: 8
+        Points Obtained: 8
+
+    "Crawling: Start and stop":
+        Points Possible: 4
+        Points Obtained: 4
+
+    "Crawling: Visit url once":
+        Points Possible: 20
+        Points Obtained: 20
+
+    "Crawling: FIFO order":
+        Points Possible: 8
+        Points Obtained: 8
+
+    Code structure and style:
+        Points Possible: 20
+        Points Obtained: 14
+
+    Automated Tests:
+        Points Possible: 30
+        Points Obtained: 30
+
+Total Points: 138 / 150
+
+Comments: >
+    Pretty good use of helper functions. Some functions were not so easy to read. See crawler.py for details

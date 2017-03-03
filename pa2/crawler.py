@@ -83,6 +83,10 @@ def open_json_key(course_map_filename):
         course_number_data: a dictionary    
     '''
 
+    ### GRADER COMMENT
+    # this does not need to be a helper function if its used once.
+    # PENALTY -1 (style)
+
     with open(course_map_filename) as json_data:
         course_number_data = json.load(json_data)
     return course_number_data
@@ -102,6 +106,11 @@ def put_words_to_index(all_words, course_identifier, index_dictionary):
                           mapped to words
             as key-value pairs
     '''
+    ### GRADER COMMENT
+    # You should use a dict of sets, not a dict of lists
+    # come on, you used sets up to this point
+    # you were so close!!!
+    # PENALTY -2 (Indexing, maintain and write index)
 
     words_to_index = all_words - INDEX_IGNORE
     for word in words_to_index:
@@ -152,7 +161,18 @@ def build_dict(soup, index_dictionary, course_code_identifier_map):
         mapped to words as key-value pairs
     '''
     course_list = soup.find_all('div', class_='courseblock main')
-        
+    
+    ### GRADER COMMENTS
+    # Reasons this is hard to read:
+    # 1. please limit line length to 80 characters (its in the style guide)
+    # 2. adding spacing between lines does not add clarity unless is seperates
+    #    real differences in the intent of code
+    # 3. it actually may be easier to read with shorter names
+    # PENALTY -2 STYLE
+    # Also the code here is quite redundant, you may want to reconsider what
+    # you loop over or your usage of helper functions
+    # PENALTY -4 (Indexing, process subsequences)
+
     for course_block in course_list:
         
         course_block_title = course_block.find('p', class_='courseblocktitle')
@@ -234,6 +254,14 @@ def crawler(starting_url, limiting_domain, course_map_filename):
     # already been indexed and crawled
     # urls_processed is a subset of urls_crawled 
     urls_processed = set() 
+
+    ### GRADER COMMENT
+    # These nested if statements are quite unclear
+    # You really shouldn't end up 9 indentations in
+    # Maybe use a helper function or something.
+    # PENALTY -3 (STYLE)
+
+
 
     urls_to_crawl.put(starting_url)
     urls_crawled.add(starting_url)
