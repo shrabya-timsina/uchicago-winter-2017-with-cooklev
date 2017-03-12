@@ -303,6 +303,11 @@ def histogram(matches, unmatches, zagat, fodors):
     # Drop the plot if it exists
     plt.clf()
 
+### GRADER COMMENT
+### PENALTY: -4 points
+#
+# Use a loop
+#
     # Create plots
     # Names
     plt.subplot(321)
@@ -368,6 +373,11 @@ def calc_relative_freq(score_vector_cat):
 
     return vector_dic
 
+### GRADER COMMENT
+### PENALTY: -2 points
+#
+# Use a loop for this; don't hardcode
+#
 all_vectors = [(1,1,1), (1,1,2), (1,1,0), (2,1,1), (2,1,2), (2,1,0), (0,1,1), (0,1,2), (0,1,0),
 (1,2,1), (1,2,2), (1,2,0), (2,2,1), (2,2,2), (2,2,0), (0,2,1), (0,2,2), (0,2,0), 
 (1,0,1), (1,0,2), (1,0,0), (2,0,1), (2,0,2), (2,0,0), (0,0,1), (0,0,2), (0,0,0)]
@@ -479,6 +489,11 @@ def count_matches(zagat, fodors, match_vectors, unmatch_vectors, outfile, block_
             frow_name, frow_address, frow_city = frow[1].strip().lower(), frow[2].strip().lower(), frow[3].strip().lower()
 
             # check blocking conditions. score the pair if the condition is met
+### GRADER COMMENT
+### PENALTY: -2 points
+#
+# Missing filter on block_on
+#
             if block_on == 'restaurant_name':
                 if zrow_name != frow_name:
                     continue

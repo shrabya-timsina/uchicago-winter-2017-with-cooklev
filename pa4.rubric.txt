@@ -1,0 +1,37 @@
+Points:
+    Automated Tests:
+        Points Possible: 20
+        Points Obtained: 
+
+    Creates zagat and fodors dataframes:
+        Points Possible: 25
+        Points Obtained: 25
+
+    Creates matches dataframe:
+        Points Possible: 10
+        Points Obtained: 10
+
+    Creates unmatches dataframe:
+        Points Possible: 5
+        Points Obtained: 5
+
+    Creates histograms:
+        Points Possible: 20
+        Points Obtained: 16
+
+    Counts frequency of vector types:
+        Points Possible: 5
+        Points Obtained: 3
+
+    Orders and partitions the vectors:
+        Points Possible: 10
+        Points Obtained: 10
+
+    Finds matches:
+        Points Possible: 5
+        Points Obtained: 3
+
+Total Points: 70 / 100
+
+Comments: >
+    None
