@@ -31,7 +31,7 @@ Points:
         Points Possible: 5
         Points Obtained: 3
 
-Total Points: 70 / 100
+Total Points: 72 / 100
 
 Comments: >
     None
