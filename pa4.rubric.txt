@@ -1,7 +1,7 @@
 Points:
     Automated Tests:
         Points Possible: 20
-        Points Obtained: 
+        Points Obtained: 20
 
     Creates zagat and fodors dataframes:
         Points Possible: 25
@@ -31,7 +31,7 @@ Points:
         Points Possible: 5
         Points Obtained: 3
 
-Total Points: 72 / 100
+Total Points: 92 / 100
 
 Comments: >
-    None
+    Good job!
